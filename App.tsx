@@ -308,32 +308,44 @@ function App() {
     const tableInfo = tables.find(t => t.name === tableName);
     const pkColumns = tableInfo?.columns.filter(c => c.primaryKey) || [];
 
+    // Helper to escape values for SQL
+    const escapeForSql = (val: any): string => {
+      if (val === null || val === undefined) return 'NULL';
+      const strVal = String(val);
+      return `'${strVal.replace(/'/g, "''")}'`;
+    };
+
     // Build the SET clause
-    const escapedValue = newValue === null
-      ? 'NULL'
-      : `'${String(newValue).replace(/'/g, "''")}'`;
+    const escapedValue = escapeForSql(newValue);
 
     // Build WHERE clause using primary key or all columns as fallback
-    let whereClause: string;
+    let whereConditions: string[] = [];
+
     if (pkColumns.length > 0) {
-      whereClause = pkColumns.map(pk => {
+      whereConditions = pkColumns.map(pk => {
         const colIndex = dataColumns.indexOf(pk.name);
+        if (colIndex === -1) return null; // Column not found
         const oldVal = rowData[colIndex];
-        return oldVal === null
+        return oldVal === null || oldVal === undefined
           ? `"${pk.name}" IS NULL`
-          : `"${pk.name}" = '${String(oldVal).replace(/'/g, "''")}'`;
-      }).join(' AND ');
-    } else {
-      // Fallback: use all columns (risky if duplicates exist)
-      whereClause = dataColumns.map((col, idx) => {
-        const val = rowData[idx];
-        return val === null
-          ? `"${col}" IS NULL`
-          : `"${col}" = '${String(val).replace(/'/g, "''")}'`;
-      }).join(' AND ');
+          : `"${pk.name}" = ${escapeForSql(oldVal)}`;
+      }).filter(Boolean) as string[];
     }
 
+    // If no PK or PK columns not found, use all columns
+    if (whereConditions.length === 0) {
+      whereConditions = dataColumns.map((col, idx) => {
+        const val = rowData[idx];
+        return val === null || val === undefined
+          ? `"${col}" IS NULL`
+          : `"${col}" = ${escapeForSql(val)}`;
+      });
+    }
+
+    const whereClause = whereConditions.join(' AND ');
     const updateQuery = `UPDATE "${tableName}" SET "${column}" = ${escapedValue} WHERE ${whereClause};`;
+
+    console.log('Executing UPDATE:', updateQuery);
 
     try {
       sqliteService.executeQuery(updateQuery);
@@ -344,6 +356,7 @@ function App() {
         fetchTableData(tableName, 50, 0, searchTerm, sortColumn, sortDirection);
       }
     } catch (e: any) {
+      console.error('Update failed:', e, 'Query:', updateQuery);
       alert(`Edit failed: ${e.message}`);
     }
   }, [tables, selectedTable, searchTerm, sortColumn, sortDirection, fetchTableData]);
