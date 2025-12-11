@@ -311,7 +311,7 @@ function App() {
     // Build the SET clause
     const escapedValue = newValue === null
       ? 'NULL'
-      : `'${String(newValue).replace(/'/g, "''")}''`;
+      : `'${String(newValue).replace(/'/g, "''")}'`;
 
     // Build WHERE clause using primary key or all columns as fallback
     let whereClause: string;
