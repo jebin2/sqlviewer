@@ -5,6 +5,7 @@ import { TableInfo, QueryResult, ColumnInfo, ForeignKey } from '../types';
 // Define minimal types locally to avoid import issues if the ESM wrapper doesn't export them
 interface SqlJsDatabase {
   exec(sql: string): { columns: string[]; values: any[][] }[];
+  export(): Uint8Array;
   close(): void;
 }
 
@@ -18,7 +19,7 @@ class SqliteService {
 
   async init() {
     if (this.SQL) return;
-    
+
     try {
       const response = await fetch(SQL_WASM_URL);
       if (!response.ok) {
@@ -49,7 +50,7 @@ class SqliteService {
 
   getTables(): TableInfo[] {
     if (!this.db) return [];
-    
+
     // Get tables
     const result = this.db.exec(`
       SELECT name, sql 
@@ -63,7 +64,7 @@ class SqliteService {
     const tables = result[0].values.map((row) => {
       const name = row[0] as string;
       const sql = row[1] as string;
-      
+
       // Get exact row count
       let count = 0;
       try {
@@ -80,12 +81,12 @@ class SqliteService {
       try {
         const colRes = this.db!.exec(`PRAGMA table_info("${name}")`);
         if (colRes.length > 0) {
-            // cid, name, type, notnull, dflt_value, pk
-            columns = colRes[0].values.map(c => ({
-                name: c[1] as string,
-                type: c[2] as string,
-                primaryKey: (c[5] as number) > 0
-            }));
+          // cid, name, type, notnull, dflt_value, pk
+          columns = colRes[0].values.map(c => ({
+            name: c[1] as string,
+            type: c[2] as string,
+            primaryKey: (c[5] as number) > 0
+          }));
         }
       } catch (e) {
         console.warn(`Could not fetch columns for ${name}`, e);
@@ -96,12 +97,12 @@ class SqliteService {
       try {
         const fkRes = this.db!.exec(`PRAGMA foreign_key_list("${name}")`);
         if (fkRes.length > 0) {
-            // id, seq, table, from, to, on_update, on_delete, match
-            foreignKeys = fkRes[0].values.map(fk => ({
-                toTable: fk[2] as string,
-                from: fk[3] as string,
-                toColumn: fk[4] as string
-            }));
+          // id, seq, table, from, to, on_update, on_delete, match
+          foreignKeys = fkRes[0].values.map(fk => ({
+            toTable: fk[2] as string,
+            from: fk[3] as string,
+            toColumn: fk[4] as string
+          }));
         }
       } catch (e) {
         console.warn(`Could not fetch foreign keys for ${name}`, e);
@@ -131,18 +132,18 @@ class SqliteService {
     try {
       const res = this.db.exec(sql);
       const end = performance.now();
-      
+
       if (res.length === 0) {
         return { columns: [], values: [], executionTime: end - start };
       }
-      
+
       return {
         columns: res[0].columns,
         values: res[0].values,
         executionTime: end - start
       };
     } catch (err: any) {
-       throw new Error(err.message);
+      throw new Error(err.message);
     }
   }
 
@@ -152,7 +153,7 @@ class SqliteService {
     try {
       const res = this.db.exec(`PRAGMA table_info("${tableName}")`);
       if (res.length === 0) return [];
-      
+
       // cid, name, type, notnull, dflt_value, pk
       return res[0].values.map(row => ({
         name: row[1] as string,
@@ -162,6 +163,12 @@ class SqliteService {
     } catch (e) {
       return [];
     }
+  }
+
+  // Export database as binary SQLite file
+  exportDb(): Uint8Array | null {
+    if (!this.db) return null;
+    return this.db.export();
   }
 }
 

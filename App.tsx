@@ -176,6 +176,29 @@ function App() {
     }
   };
 
+  const handleExportDb = () => {
+    const data = sqliteService.exportDb();
+    if (!data) {
+      alert('No database loaded to export.');
+      return;
+    }
+
+    // Create download link - create a copy for Blob compatibility
+    const blob = new Blob([new Uint8Array(data)], { type: 'application/x-sqlite3' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    // Use original filename or default
+    const exportName = fileName.endsWith('.sqlite') || fileName.endsWith('.db')
+      ? fileName
+      : fileName.replace(/\.[^.]+$/, '') + '.sqlite';
+    a.download = exportName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const renderMainContent = () => {
     switch (currentMode) {
       case 'QUERY':
@@ -225,6 +248,7 @@ function App() {
         onModeChange={setCurrentMode}
         currentMode={currentMode}
         dbName={fileName}
+        onExport={handleExportDb}
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative z-0">

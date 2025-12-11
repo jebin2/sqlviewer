@@ -1,19 +1,20 @@
 import React, { useMemo, useState } from 'react';
 import { TableInfo, ViewMode } from '../types';
-import { 
-  Table, 
-  Search, 
-  Database, 
-  Layers, 
-  ChevronRight, 
-  ChevronDown, 
-  Hash, 
-  Type, 
-  Calendar, 
-  CheckCircle2, 
+import {
+  Table,
+  Search,
+  Database,
+  Layers,
+  ChevronRight,
+  ChevronDown,
+  Hash,
+  Type,
+  Calendar,
+  CheckCircle2,
   Key,
   Binary,
-  Workflow
+  Workflow,
+  Download
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -23,15 +24,17 @@ interface SidebarProps {
   onModeChange: (mode: ViewMode) => void;
   currentMode: ViewMode;
   dbName: string;
+  onExport: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ 
-  tables, 
-  selectedTable, 
+export const Sidebar: React.FC<SidebarProps> = ({
+  tables,
+  selectedTable,
   onSelectTable,
   onModeChange,
   currentMode,
-  dbName
+  dbName,
+  onExport
 }) => {
   const [search, setSearch] = useState('');
   const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set());
@@ -81,8 +84,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const menuButtonClass = (isActive: boolean) => `
     w-full flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200
-    ${isActive 
-      ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 ring-1 ring-blue-500' 
+    ${isActive
+      ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 ring-1 ring-blue-500'
       : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent hover:border-slate-700'
     }
   `;
@@ -92,12 +95,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-5 border-b border-slate-800">
         <div className="flex items-center gap-3 text-white mb-2">
           <div className="w-9 h-9 rounded bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-900/50">
-             <Database className="w-5 h-5" />
+            <Database className="w-5 h-5" />
           </div>
           <span className="font-semibold truncate text-base" title={dbName}>{dbName}</span>
         </div>
         <div className="flex items-center justify-between text-sm text-slate-500 pl-1">
           <span>{tables.length} tables found</span>
+          <button
+            onClick={onExport}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all text-xs font-medium border border-slate-700 hover:border-slate-600"
+            title="Export database as SQLite file"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export
+          </button>
         </div>
       </div>
 
@@ -120,9 +131,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="relative group mt-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Filter tables..." 
+          <input
+            type="text"
+            placeholder="Filter tables..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-3 py-2.5 text-base text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
@@ -132,7 +143,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <div className="flex-1 overflow-y-auto px-2 pb-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
         <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-4 mt-2">Database Schema</div>
-        
+
         <div className="space-y-1">
           {filteredTables.map((table) => {
             const isExpanded = expandedTables.has(table.name);
@@ -148,13 +159,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className={`
                     group w-full flex items-center justify-between px-3 py-2.5 rounded-md text-base transition-all cursor-pointer border border-transparent
                     ${isSelected
-                      ? 'bg-slate-800 text-white border-slate-700' 
+                      ? 'bg-slate-800 text-white border-slate-700'
                       : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
                     }
                   `}
                 >
                   <div className="flex items-center gap-3 overflow-hidden">
-                    <button 
+                    <button
                       onClick={(e) => toggleTable(e, table.name)}
                       className={`p-1 rounded hover:bg-slate-700/50 transition-colors ${isSelected ? 'text-slate-300' : 'text-slate-600'}`}
                     >
@@ -173,14 +184,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {table.columns.map((col) => (
                       <div key={col.name} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500 hover:text-slate-300 hover:bg-slate-800/30 rounded cursor-default group/col">
                         <span className={`${col.primaryKey ? 'text-yellow-500' : 'text-slate-600 group-hover/col:text-slate-500'}`}>
-                           {col.primaryKey ? <Key className="w-3.5 h-3.5" /> : getColumnIcon(col.type)}
+                          {col.primaryKey ? <Key className="w-3.5 h-3.5" /> : getColumnIcon(col.type)}
                         </span>
                         <span className={`truncate ${col.primaryKey ? 'text-yellow-500/90 font-medium' : ''}`}>{col.name}</span>
                         <span className="ml-auto text-[10px] uppercase text-slate-600 opacity-50 group-hover/col:opacity-100">{col.type}</span>
                       </div>
                     ))}
                     {table.columns.length === 0 && (
-                        <div className="px-3 py-1 text-sm text-slate-600 italic">No columns info</div>
+                      <div className="px-3 py-1 text-sm text-slate-600 italic">No columns info</div>
                     )}
                   </div>
                 )}
