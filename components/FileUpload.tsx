@@ -40,7 +40,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessi
           <div className="inline-flex items-center justify-center p-4 bg-blue-100 rounded-2xl mb-6">
             <Database className="w-10 h-10 text-blue-600" />
           </div>
-          <h1 className="text-4xl font-bold text-slate-900 mb-4 tracking-tight">Lumina SQLite Viewer</h1>
+          <h1 className="text-4xl font-bold text-slate-900 mb-4 tracking-tight">SQLite Viewer</h1>
           <p className="text-lg text-slate-600">
             Secure, client-side database explorer. Your data never leaves your browser.
           </p>

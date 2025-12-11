@@ -1,5 +1,5 @@
 {
-  "name": "Lumina SQLite Viewer",
+  "name": "SQLite Viewer",
   "description": "A beautiful, high-performance SQLite database viewer with AI-powered query assistance.",
   "requestFramePermissions": []
 }
