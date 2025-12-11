@@ -1,20 +1,30 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# SQLite Viewer
 
-# Run and deploy your AI Studio app
+A browser-based SQLite database viewer and editor. Upload a `.sqlite` or `.db` file to browse, search, edit, and export.
 
-This contains everything you need to run your app locally.
+**Live Demo:** [https://jebin2.github.io/sqlviewer/](https://jebin2.github.io/sqlviewer/)
 
-View your app in AI Studio: https://ai.studio/apps/drive/1IKu7QZEcGl1JIohPX-UKki4vobWKyU9X
+## Features
+
+- 📁 **Upload SQLite files** - Drag & drop or click to upload
+- 📊 **Browse tables** - View data with pagination, sorting, and search
+- ✏️ **Edit cells** - Click any cell to view/edit, changes saved to database
+- 📋 **Edit Query Log** - Copy generated UPDATE statements to run on your server
+- 💾 **Export** - Download modified database in original SQLite format
+- 🔗 **Schema Diagram** - Visualize table relationships
+- 🖥️ **SQL Editor** - Run custom queries
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+**Prerequisites:** Node.js
 
+```bash
+npm install
+npm run dev
+```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Deploy to GitHub Pages
+
+```bash
+npm run push
+```
