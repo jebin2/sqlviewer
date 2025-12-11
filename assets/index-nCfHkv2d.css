@@ -1,0 +1,1 @@
+.resizable-header{position:relative}.resize-handle{position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize;background:transparent;transition:background-color .2s}.resize-handle:hover,.resize-handle.resizing{background-color:#3b82f6}.data-table th,.data-table td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.data-table th{transition:width .05s ease-out}
