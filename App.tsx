@@ -6,7 +6,106 @@ import { QueryEditor } from './components/QueryEditor';
 import { SchemaVisualizer } from './components/SchemaVisualizer';
 import { sqliteService } from './services/sqliteService';
 import { TableInfo, QueryResult, ColumnInfo, ViewMode } from './types';
-import { Database } from 'lucide-react';
+import { Database, X, Copy, Check, FileText, Trash2 } from 'lucide-react';
+
+// Edit History Modal Component
+const EditHistoryModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  queries: string[];
+  onClear: () => void;
+}> = ({ isOpen, onClose, queries, onClear }) => {
+  const [copied, setCopied] = useState(false);
+
+  if (!isOpen) return null;
+
+  const allQueries = queries.join('\n');
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(allQueries);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[85vh]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800">Edit Query Log</h3>
+              <p className="text-sm text-slate-500">{queries.length} modification{queries.length !== 1 ? 's' : ''} made</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+          {queries.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">
+              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg">No edits made yet</p>
+              <p className="text-sm mt-1">Click on any cell to edit its value</p>
+            </div>
+          ) : (
+            <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm text-green-400 overflow-x-auto">
+              {queries.map((query, idx) => (
+                <div key={idx} className="py-1 border-b border-slate-700 last:border-b-0">
+                  <span className="text-slate-500 mr-3">#{idx + 1}</span>
+                  {query}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-slate-100 bg-white rounded-b-xl flex justify-between">
+          <button
+            onClick={onClear}
+            disabled={queries.length === 0}
+            className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear History
+          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              Close
+            </button>
+            <button
+              onClick={handleCopy}
+              disabled={queries.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copy All Queries
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function App() {
   const [dbLoaded, setDbLoaded] = useState(false);
@@ -27,6 +126,10 @@ function App() {
   // Query Editor State
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
+
+  // Edit History State
+  const [editHistory, setEditHistory] = useState<string[]>([]);
+  const [showEditHistory, setShowEditHistory] = useState(false);
 
   const [dataLoading, setDataLoading] = useState(false);
 
@@ -199,6 +302,52 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
+  // Handle cell edit - generate and execute UPDATE query
+  const handleCellEdit = useCallback((tableName: string, column: string, newValue: any, rowData: any[], dataColumns: string[]) => {
+    // Find primary key column(s) to build WHERE clause
+    const tableInfo = tables.find(t => t.name === tableName);
+    const pkColumns = tableInfo?.columns.filter(c => c.primaryKey) || [];
+
+    // Build the SET clause
+    const escapedValue = newValue === null
+      ? 'NULL'
+      : `'${String(newValue).replace(/'/g, "''")}''`;
+
+    // Build WHERE clause using primary key or all columns as fallback
+    let whereClause: string;
+    if (pkColumns.length > 0) {
+      whereClause = pkColumns.map(pk => {
+        const colIndex = dataColumns.indexOf(pk.name);
+        const oldVal = rowData[colIndex];
+        return oldVal === null
+          ? `"${pk.name}" IS NULL`
+          : `"${pk.name}" = '${String(oldVal).replace(/'/g, "''")}'`;
+      }).join(' AND ');
+    } else {
+      // Fallback: use all columns (risky if duplicates exist)
+      whereClause = dataColumns.map((col, idx) => {
+        const val = rowData[idx];
+        return val === null
+          ? `"${col}" IS NULL`
+          : `"${col}" = '${String(val).replace(/'/g, "''")}'`;
+      }).join(' AND ');
+    }
+
+    const updateQuery = `UPDATE "${tableName}" SET "${column}" = ${escapedValue} WHERE ${whereClause};`;
+
+    try {
+      sqliteService.executeQuery(updateQuery);
+      // Add to edit history
+      setEditHistory(prev => [...prev, updateQuery]);
+      // Refresh current table data
+      if (selectedTable === tableName) {
+        fetchTableData(tableName, 50, 0, searchTerm, sortColumn, sortDirection);
+      }
+    } catch (e: any) {
+      alert(`Edit failed: ${e.message}`);
+    }
+  }, [tables, selectedTable, searchTerm, sortColumn, sortDirection, fetchTableData]);
+
   const renderMainContent = () => {
     switch (currentMode) {
       case 'QUERY':
@@ -228,6 +377,7 @@ function App() {
             sortColumn={sortColumn}
             sortDirection={sortDirection}
             isLoading={dataLoading}
+            onCellEdit={handleCellEdit}
           />
         ) : (
           <EmptyState />
@@ -249,11 +399,20 @@ function App() {
         currentMode={currentMode}
         dbName={fileName}
         onExport={handleExportDb}
+        editCount={editHistory.length}
+        onShowEditHistory={() => setShowEditHistory(true)}
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative z-0">
         {renderMainContent()}
       </main>
+
+      <EditHistoryModal
+        isOpen={showEditHistory}
+        onClose={() => setShowEditHistory(false)}
+        queries={editHistory}
+        onClear={() => setEditHistory([])}
+      />
     </div>
   );
 }

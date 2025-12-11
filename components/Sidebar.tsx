@@ -14,7 +14,8 @@ import {
   Key,
   Binary,
   Workflow,
-  Download
+  Download,
+  FileText
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,6 +26,8 @@ interface SidebarProps {
   currentMode: ViewMode;
   dbName: string;
   onExport: () => void;
+  editCount: number;
+  onShowEditHistory: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -34,7 +37,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onModeChange,
   currentMode,
   dbName,
-  onExport
+  onExport,
+  editCount,
+  onShowEditHistory
 }) => {
   const [search, setSearch] = useState('');
   const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set());
@@ -101,14 +106,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         <div className="flex items-center justify-between text-sm text-slate-500 pl-1">
           <span>{tables.length} tables found</span>
-          <button
-            onClick={onExport}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all text-xs font-medium border border-slate-700 hover:border-slate-600"
-            title="Export database as SQLite file"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onShowEditHistory}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium border ${editCount > 0
+                  ? 'bg-amber-900/50 hover:bg-amber-800/50 text-amber-400 hover:text-amber-300 border-amber-700 hover:border-amber-600'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border-slate-700 hover:border-slate-600'
+                }`}
+              title="View edit query log"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Edits
+              {editCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-amber-500 text-amber-950 font-bold">
+                  {editCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={onExport}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all text-xs font-medium border border-slate-700 hover:border-slate-600"
+              title="Export database as SQLite file"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export
+            </button>
+          </div>
         </div>
       </div>
 

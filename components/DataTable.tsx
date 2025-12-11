@@ -14,37 +14,80 @@ interface DataTableProps {
   sortColumn: string | null;
   sortDirection: 'ASC' | 'DESC';
   isLoading: boolean;
+  onCellEdit?: (tableName: string, column: string, newValue: any, rowData: any[], columns: string[]) => void;
 }
 
 interface CellDetail {
   value: any;
   column: string;
+  rowIndex: number;
+  rowData: any[];
 }
 
 const CellModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  data: CellDetail | null
-}> = ({ isOpen, onClose, data }) => {
+  data: CellDetail | null;
+  onEdit?: (column: string, newValue: any, rowIndex: number) => void;
+}> = ({ isOpen, onClose, data, onEdit }) => {
   const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const [isNull, setIsNull] = useState(false);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        if (isEditing) {
+          setIsEditing(false);
+        } else {
+          onClose();
+        }
+      }
     };
     if (isOpen) window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isEditing]);
+
+  // Reset edit state when data changes
+  useEffect(() => {
+    if (data) {
+      setEditValue(data.value === null ? '' : String(data.value));
+      setIsNull(data.value === null);
+      setIsEditing(false);
+    }
+  }, [data]);
 
   if (!isOpen || !data) return null;
 
   const displayValue = data.value === null ? 'NULL' : String(data.value);
-  const isNull = data.value === null;
+  const originalIsNull = data.value === null;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(displayValue);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleStartEdit = () => {
+    setIsEditing(true);
+    setEditValue(originalIsNull ? '' : String(data.value));
+    setIsNull(originalIsNull);
+  };
+
+  const handleSave = () => {
+    if (onEdit) {
+      const newValue = isNull ? null : editValue;
+      onEdit(data.column, newValue, data.rowIndex);
+    }
+    setIsEditing(false);
+    onClose();
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditValue(originalIsNull ? '' : String(data.value));
+    setIsNull(originalIsNull);
   };
 
   return (
@@ -57,8 +100,13 @@ const CellModal: React.FC<{
           <div className="flex items-center gap-3">
             <h3 className="text-xl font-semibold text-slate-800">{data.column}</h3>
             <span className="px-2.5 py-1 rounded text-sm font-medium bg-slate-100 text-slate-500 border border-slate-200">
-              {isNull ? 'NULL' : typeof data.value}
+              {originalIsNull ? 'NULL' : typeof data.value}
             </span>
+            {isEditing && (
+              <span className="px-2.5 py-1 rounded text-sm font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                Editing
+              </span>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -69,33 +117,82 @@ const CellModal: React.FC<{
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
-          <div className={`
-            w-full h-full rounded-lg border border-slate-200 bg-white p-6 font-mono text-base leading-relaxed overflow-x-auto
-            ${isNull ? 'text-slate-400 italic' : 'text-slate-700'}
-          `}>
-            <pre className="whitespace-pre-wrap break-all font-mono">
-              {displayValue}
-            </pre>
-          </div>
+          {isEditing ? (
+            <div className="space-y-4">
+              <label className="flex items-center gap-3 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={isNull}
+                  onChange={(e) => setIsNull(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                Set as NULL
+              </label>
+              <textarea
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                disabled={isNull}
+                className={`
+                  w-full h-64 rounded-lg border border-slate-200 bg-white p-4 font-mono text-base leading-relaxed
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none
+                  ${isNull ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'text-slate-700'}
+                `}
+                placeholder={isNull ? 'Value will be NULL' : 'Enter value...'}
+              />
+            </div>
+          ) : (
+            <div className={`
+              w-full h-full rounded-lg border border-slate-200 bg-white p-6 font-mono text-base leading-relaxed overflow-x-auto
+              ${originalIsNull ? 'text-slate-400 italic' : 'text-slate-700'}
+            `}>
+              <pre className="whitespace-pre-wrap break-all font-mono">
+                {displayValue}
+              </pre>
+            </div>
+          )}
         </div>
 
-        <div className="px-8 py-5 border-t border-slate-100 bg-white rounded-b-xl flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose}>
-            Close
-          </Button>
-          <Button onClick={handleCopy} disabled={isNull}>
-            {copied ? (
+        <div className="px-8 py-5 border-t border-slate-100 bg-white rounded-b-xl flex justify-between">
+          <div>
+            {!isEditing && onEdit && (
+              <Button variant="secondary" onClick={handleStartEdit}>
+                <span className="mr-2">✏️</span>
+                Edit
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            {isEditing ? (
               <>
-                <Check className="w-4 h-4 mr-2" />
-                Copied
+                <Button variant="secondary" onClick={handleCancel}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSave}>
+                  <Check className="w-4 h-4 mr-2" />
+                  Save Changes
+                </Button>
               </>
             ) : (
               <>
-                <Copy className="w-4 h-4 mr-2" />
-                Copy Content
+                <Button variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+                <Button onClick={handleCopy} disabled={originalIsNull}>
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy Content
+                    </>
+                  )}
+                </Button>
               </>
             )}
-          </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -112,7 +209,8 @@ export const DataTable: React.FC<DataTableProps> = ({
   onSort,
   sortColumn,
   sortDirection,
-  isLoading
+  isLoading,
+  onCellEdit
 }) => {
   const [page, setPage] = useState(1);
   const limit = 50;
@@ -347,9 +445,9 @@ export const DataTable: React.FC<DataTableProps> = ({
                   return (
                     <td
                       key={cellIdx}
-                      onClick={() => setSelectedCell({ value: cell, column: colName })}
+                      onClick={() => setSelectedCell({ value: cell, column: colName, rowIndex: rowIdx, rowData: row })}
                       className="px-6 py-3 text-slate-600 max-w-xs truncate cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors relative group/cell"
-                      title="Click to view full content"
+                      title="Click to view/edit"
                     >
                       {cell === null ? (
                         <span className="text-sm text-slate-300 italic">NULL</span>
@@ -497,6 +595,11 @@ export const DataTable: React.FC<DataTableProps> = ({
         isOpen={!!selectedCell}
         onClose={() => setSelectedCell(null)}
         data={selectedCell}
+        onEdit={onCellEdit ? (column, newValue, rowIndex) => {
+          if (selectedCell && data) {
+            onCellEdit(tableName, column, newValue, selectedCell.rowData, data.columns);
+          }
+        } : undefined}
       />
     </>
   );
