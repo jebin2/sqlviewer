@@ -171,15 +171,15 @@ export const SchemaVisualizer: React.FC<SchemaVisualizerProps> = ({ tables }) =>
         }}
       />
 
-      {/* Connections Layer */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible">
-        {renderConnections()}
-      </svg>
-
-      {/* Nodes Layer */}
+      {/* Nodes and Connections Layer - both in scrollable container */}
       <div className="absolute inset-0 overflow-auto">
         {/* We use a large container to allow scrolling if nodes are dragged far */}
         <div className="w-[3000px] h-[3000px] relative">
+          {/* Connections Layer - inside scrollable container */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible">
+            {renderConnections()}
+          </svg>
+
           {tables.map(table => {
             const pos = positions[table.name] || { x: 0, y: 0 };
 
