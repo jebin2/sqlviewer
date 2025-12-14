@@ -122,8 +122,31 @@ class SqliteService {
 
   getSchemaString(): string {
     if (!this.db) return '';
-    const tables = this.getTables();
-    return tables.map(t => t.schema).join(';\n');
+
+    // Get all schema objects: tables, indexes, triggers, views
+    const result = this.db.exec(`
+      SELECT type, name, sql 
+      FROM sqlite_master 
+      WHERE name NOT LIKE 'sqlite_%' AND sql IS NOT NULL
+      ORDER BY 
+        CASE type 
+          WHEN 'table' THEN 1 
+          WHEN 'view' THEN 2 
+          WHEN 'index' THEN 3 
+          WHEN 'trigger' THEN 4 
+          ELSE 5 
+        END,
+        name ASC
+    `);
+
+    if (result.length === 0) return '';
+
+    return result[0].values
+      .map(row => {
+        const sql = row[2] as string;
+        return sql.endsWith(';') ? sql : sql + ';';
+      })
+      .join('\n\n');
   }
 
   executeQuery(sql: string): QueryResult {
