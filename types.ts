@@ -29,7 +29,7 @@ export interface DatabaseError {
   message: string;
 }
 
-export type ViewMode = 'BROWSE' | 'QUERY' | 'SCHEMA';
+export type ViewMode = 'BROWSE' | 'QUERY' | 'SCHEMA' | 'LLM_SCHEMA';
 
 export interface SqlService {
   init: () => Promise<void>;

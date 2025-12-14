@@ -5,6 +5,7 @@ import { DataTable } from './components/DataTable';
 import { QueryEditor } from './components/QueryEditor';
 import { MiniQueryEditor } from './components/MiniQueryEditor';
 import { SchemaVisualizer } from './components/SchemaVisualizer';
+import { LLMSchemaView } from './components/LLMSchemaView';
 import { sqliteService } from './services/sqliteService';
 import { TableInfo, QueryResult, ColumnInfo, ViewMode } from './types';
 import { Database, X, Copy, Check, FileText, Trash2 } from 'lucide-react';
@@ -403,6 +404,10 @@ function App() {
       case 'SCHEMA':
         return (
           <SchemaVisualizer tables={tables} />
+        );
+      case 'LLM_SCHEMA':
+        return (
+          <LLMSchemaView schema={sqliteService.getSchemaString()} />
         );
       case 'BROWSE':
       default:

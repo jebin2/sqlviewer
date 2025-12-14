@@ -16,7 +16,8 @@ import {
   Workflow,
   Download,
   FileText,
-  Heart
+  Heart,
+  Sparkles
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -151,6 +152,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <Workflow className="w-5 h-5" />
           <span>Relations Diagram</span>
+        </button>
+
+        <button
+          onClick={() => onModeChange('LLM_SCHEMA')}
+          className={menuButtonClass(currentMode === 'LLM_SCHEMA')}
+        >
+          <Sparkles className="w-5 h-5" />
+          <span>LLM Ready Schema</span>
         </button>
 
         <div className="relative group mt-4">
