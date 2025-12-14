@@ -3,6 +3,7 @@ import { FileUpload } from './components/FileUpload';
 import { Sidebar } from './components/Sidebar';
 import { DataTable } from './components/DataTable';
 import { QueryEditor } from './components/QueryEditor';
+import { MiniQueryEditor } from './components/MiniQueryEditor';
 import { SchemaVisualizer } from './components/SchemaVisualizer';
 import { sqliteService } from './services/sqliteService';
 import { TableInfo, QueryResult, ColumnInfo, ViewMode } from './types';
@@ -122,6 +123,7 @@ function App() {
   const [rowCount, setRowCount] = useState(0);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('ASC');
+  const [customQuery, setCustomQuery] = useState<string | null>(null);
 
   // Query Editor State
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
@@ -213,6 +215,7 @@ function App() {
     setSearchTerm(''); // Reset search term UI
     setSortColumn(null); // Reset sort
     setSortDirection('ASC');
+    setCustomQuery(null); // Reset custom query
     // Reset to first page (offset 0)
     fetchTableData(tableName, 50, 0, '', null, 'ASC');
   }, [fetchTableData]);
@@ -241,7 +244,20 @@ function App() {
   };
 
   const handlePageChange = (limit: number, offset: number) => {
-    if (selectedTable) {
+    if (customQuery) {
+      // Handle pagination for custom query
+      try {
+        let query = `SELECT * FROM (${customQuery})`;
+        if (sortColumn) {
+          query += ` ORDER BY "${sortColumn}" ${sortDirection}`;
+        }
+        query += ` LIMIT ${limit} OFFSET ${offset}`;
+        const result = sqliteService.executeQuery(query);
+        setTableData(result);
+      } catch (e) {
+        console.error("Pagination failed for custom query", e);
+      }
+    } else if (selectedTable) {
       fetchTableData(selectedTable, limit, offset, searchTerm, sortColumn, sortDirection);
     }
   };
@@ -262,7 +278,19 @@ function App() {
     setSortColumn(column);
     setSortDirection(newDirection);
 
-    if (selectedTable) {
+    if (customQuery) {
+      // Handle sort for custom query
+      try {
+        let query = `SELECT * FROM (${customQuery}) ORDER BY "${column}" ${newDirection} LIMIT 50 OFFSET 0`;
+        const result = sqliteService.executeQuery(query);
+        setTableData(result);
+        // Reset to first page
+        // Note: We don't have explicit page state in App, it's managed by DataTable or derived.
+        // But DataTable resets page on sort change.
+      } catch (e) {
+        console.error("Sort failed for custom query", e);
+      }
+    } else if (selectedTable) {
       // Reset to first page when sorting changes
       fetchTableData(selectedTable, 50, 0, searchTerm, column, newDirection);
     }
@@ -379,19 +407,50 @@ function App() {
       case 'BROWSE':
       default:
         return selectedTable ? (
-          <DataTable
-            tableName={selectedTable}
-            data={tableData}
-            columns={tableColumns}
-            totalRows={rowCount}
-            onPageChange={handlePageChange}
-            onSearch={handleSearch}
-            onSort={handleSort}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
-            isLoading={dataLoading}
-            onCellEdit={handleCellEdit}
-          />
+          <div className="flex flex-col h-full">
+            <MiniQueryEditor
+              onExecute={(sql) => {
+                try {
+                  // 1. Get Count
+                  const countQuery = `SELECT COUNT(*) as count FROM (${sql})`;
+                  const countRes = sqliteService.executeQuery(countQuery);
+                  const count = countRes.values.length > 0 ? Number(countRes.values[0][0]) : 0;
+                  setRowCount(count);
+
+                  // 2. Get Data (First Page)
+                  const query = `SELECT * FROM (${sql}) LIMIT 50 OFFSET 0`;
+                  const result = sqliteService.executeQuery(query);
+                  setTableData(result);
+
+                  // 3. Update State
+                  setCustomQuery(sql);
+                  setSortColumn(null);
+                  setSearchTerm('');
+                } catch (e: any) {
+                  alert(`Query failed: ${e.message}`);
+                }
+              }}
+              onReset={() => {
+                if (selectedTable) {
+                  handleSelectTable(selectedTable);
+                }
+              }}
+              tableName={selectedTable}
+            />
+            <DataTable
+              tableName={selectedTable}
+              data={tableData}
+              columns={tableColumns}
+              totalRows={rowCount}
+              onPageChange={handlePageChange}
+              onSearch={handleSearch}
+              onSort={handleSort}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              isLoading={dataLoading}
+              onCellEdit={handleCellEdit}
+            />
+          </div>
         ) : (
           <EmptyState />
         );
