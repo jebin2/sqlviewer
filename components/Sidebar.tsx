@@ -15,7 +15,8 @@ import {
   Binary,
   Workflow,
   Download,
-  FileText
+  FileText,
+  Heart
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -110,8 +111,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               onClick={onShowEditHistory}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium border ${editCount > 0
-                  ? 'bg-amber-900/50 hover:bg-amber-800/50 text-amber-400 hover:text-amber-300 border-amber-700 hover:border-amber-600'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border-slate-700 hover:border-slate-600'
+                ? 'bg-amber-900/50 hover:bg-amber-800/50 text-amber-400 hover:text-amber-300 border-amber-700 hover:border-amber-600'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border-slate-700 hover:border-slate-600'
                 }`}
               title="View edit query log"
             >
@@ -230,6 +231,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
       </div>
-    </div>
+
+      <div className="p-4 border-t border-slate-800">
+        <a
+          href="https://github.com/sponsors/jebin2?frequency=one-time&sponsor=jebin2"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-pink-600 hover:bg-pink-500 text-white font-medium transition-colors shadow-lg shadow-pink-900/20"
+        >
+          <Heart className="w-4 h-4 fill-current" />
+          <span>Sponsor</span>
+        </a>
+      </div>
+    </div >
   );
 };
