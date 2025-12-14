@@ -411,19 +411,22 @@ function App() {
             <MiniQueryEditor
               onExecute={(sql) => {
                 try {
+                  // Remove trailing semicolon if present
+                  const cleanSql = sql.trim().replace(/;$/, '');
+
                   // 1. Get Count
-                  const countQuery = `SELECT COUNT(*) as count FROM (${sql})`;
+                  const countQuery = `SELECT COUNT(*) as count FROM (${cleanSql})`;
                   const countRes = sqliteService.executeQuery(countQuery);
                   const count = countRes.values.length > 0 ? Number(countRes.values[0][0]) : 0;
                   setRowCount(count);
 
                   // 2. Get Data (First Page)
-                  const query = `SELECT * FROM (${sql}) LIMIT 50 OFFSET 0`;
+                  const query = `SELECT * FROM (${cleanSql}) LIMIT 50 OFFSET 0`;
                   const result = sqliteService.executeQuery(query);
                   setTableData(result);
 
                   // 3. Update State
-                  setCustomQuery(sql);
+                  setCustomQuery(cleanSql);
                   setSortColumn(null);
                   setSearchTerm('');
                 } catch (e: any) {
